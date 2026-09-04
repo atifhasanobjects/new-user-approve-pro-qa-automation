@@ -4,6 +4,7 @@ import com.nuapro.config.Config;
 import com.nuapro.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.Select;
 
 public class RegistrationPage {
 
@@ -13,6 +14,7 @@ public class RegistrationPage {
     private final By usernameInput = By.id("user_login");
     private final By emailInput = By.id("user_email");
     private final By invitationCodeInput = By.cssSelector("input[name='nua_invitation_code'], input[name='invitation_code'], #invitation_code");
+    private final By userRoleSelect = By.name("nua_user_role");
     private final By submitButton = By.id("wp-submit");
     private final By successMessage = By.cssSelector(".message, .register-success, .nua-success-msg");
     private final By errorMessage = By.cssSelector("#login_error, .error, .nua-error-msg");
@@ -63,6 +65,24 @@ public class RegistrationPage {
         // functional invitation-code test would otherwise pass without ever
         // submitting the code.
         waitUtils.sendKeys(invitationCodeInput, invitationCode);
+        waitUtils.clickElement(submitButton);
+    }
+
+    public boolean isUserRoleSelectAvailable() {
+        try {
+            return waitUtils.waitForVisibility(userRoleSelect).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void registerUserWithRole(String username, String email, String roleValue) {
+        open();
+        waitUntilRegistrationFormAvailable();
+        waitUtils.sendKeys(usernameInput, username);
+        waitUtils.sendKeys(emailInput, email);
+        Select role = new Select(waitUtils.waitForVisibility(userRoleSelect));
+        role.selectByValue(roleValue);
         waitUtils.clickElement(submitButton);
     }
 

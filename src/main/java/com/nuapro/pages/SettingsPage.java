@@ -115,6 +115,11 @@ public class SettingsPage {
         return waitUtils.isCheckboxSelected(inviteCodeToggleInput);
     }
 
+    public boolean isInvitationCodeRequiredToggleEnabled() {
+        clickGeneralTab();
+        return waitUtils.isCheckboxSelected(inviteCodeRequiredInput);
+    }
+
     public boolean isAutoApproveToggleEnabled() {
         clickGeneralTab();
         return waitUtils.isCheckboxSelected(autoApproveToggleInput);
@@ -135,6 +140,15 @@ public class SettingsPage {
         waitUtils.clickElement(autoApprovalRolesCombobox);
         By option = By.xpath("//*[@role='option' and normalize-space(.)=" + xpathLiteral(roleLabel) + "]");
         waitUtils.clickElement(option);
+        return this;
+    }
+
+    public SettingsPage clearAutoApprovalRoles() {
+        clickGeneralTab();
+        By removeRole = By.cssSelector("#roles_chooser [class*='multi-value__remove']");
+        while (!driver.findElements(removeRole).isEmpty()) {
+            waitUtils.clickElement(removeRole);
+        }
         return this;
     }
 
