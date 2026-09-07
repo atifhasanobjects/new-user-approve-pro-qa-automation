@@ -10,6 +10,8 @@ import com.nuapro.utils.TestData;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
+
 public class SettingsTest extends BaseTest {
 
     @Test(groups = {"settings"}, description = "TC037: General settings save and refresh persistence")
@@ -175,6 +177,11 @@ public class SettingsTest extends BaseTest {
         DashboardPage dashboardPage = loginPage.loginAsAdmin();
         SettingsPage settingsPage = dashboardPage.clickSettingsTab();
 
+        // Keep the fixture pending so automatic denial, rather than another
+        // approval rule, controls the resulting status.
+        settingsPage.setEnableAutoApproveToggle(false);
+        settingsPage.setEnableInvitationCodeToggle(false);
+        settingsPage.setInvitationCodeRequiredToggle(false);
         settingsPage.setAutoDenialSchedule(1, "minute");
         settingsPage.saveSettings();
         driver.navigate().refresh();
@@ -192,5 +199,40 @@ public class SettingsTest extends BaseTest {
         registrationPage.open();
         Assert.assertTrue(registrationPage.isRegistrationFormAvailable(),
                 "Registration form should be available for creating a pending user for automatic denial");
+
+        String username = TestData.generateUsername();
+        String email = username + "@example.test";
+        registrationPage.registerUser(username, email);
+        Assert.assertTrue(registrationPage.isRegistrationSuccessful(),
+                "Registration should submit successfully and create a pending user");
+
+        dashboardPage = loginPage.loginAsAdmin();
+        UsersPage usersPage = dashboardPage.clickUsersTab();
+        usersPage.clickPendingUsersSubTab();
+        usersPage.getUserTable().searchUser(email);
+        Assert.assertTrue(usersPage.getUserTable().isUserRowPresent(email),
+                "Newly registered user should initially appear in Pending users");
+
+        Assert.assertTrue(waitForDeniedUser(usersPage, email),
+                "Pending user should be automatically denied after one minute");
+    }
+
+    private boolean waitForDeniedUser(UsersPage usersPage, String email) {
+        long deadline = System.nanoTime() + Duration.ofSeconds(75).toNanos();
+        while (System.nanoTime() < deadline) {
+            driver.navigate().refresh();
+            usersPage.clickDeniedUsersSubTab();
+            usersPage.getUserTable().searchUser(email);
+            if (usersPage.getUserTable().isUserRowPresent(email)) {
+                return true;
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
     }
 }
