@@ -4,6 +4,7 @@ import com.nuapro.config.Config;
 import com.nuapro.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.Select;
 
 public class SettingsPage {
 
@@ -24,6 +25,11 @@ public class SettingsPage {
     private final By userRoleRequestToggleInput = By.id("nua_enable_user_role_request");
     private final By userRoleRequestToggleLabel = By.cssSelector("label.nua_switch[for='nua_enable_user_role_request']");
     private final By autoApprovalRolesCombobox = By.xpath("//*[@id='roles_chooser']//*[@role='combobox'] | //*[@id='roles_chooser']//input");
+    private final By autoDenialToggleInput = By.id("nua_denial");
+    private final By autoDenialToggleLabel = By.cssSelector("label.nua_switch[for='nua_denial']");
+    private final By autoDenialSettings = By.cssSelector(".denial-settings");
+    private final By autoDenialAfterValueInput = By.cssSelector(".denial-settings input[type='number']");
+    private final By autoDenialAfterUnitSelect = By.cssSelector(".denial-settings select.denial-select");
 
     private final By inviteCodeToggleInput = By.id("nua_enable_invitation_code");
     private final By inviteCodeToggleLabel = By.cssSelector("label.nua_switch[for='nua_enable_invitation_code']");
@@ -123,6 +129,44 @@ public class SettingsPage {
     public boolean isAutoApproveToggleEnabled() {
         clickGeneralTab();
         return waitUtils.isCheckboxSelected(autoApproveToggleInput);
+    }
+
+    public void setAutoDenialToggle(boolean enable) {
+        clickGeneralTab();
+        waitUtils.setCheckboxState(autoDenialToggleInput, autoDenialToggleLabel, enable);
+    }
+
+    public boolean isAutoDenialToggleEnabled() {
+        clickGeneralTab();
+        return waitUtils.isCheckboxSelected(autoDenialToggleInput);
+    }
+
+    public boolean isAutoDenialSettingsVisible() {
+        clickGeneralTab();
+        try {
+            return waitUtils.waitForVisibility(autoDenialSettings).isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public void setAutoDenialSchedule(int value, String unit) {
+        clickGeneralTab();
+        waitUtils.setCheckboxState(autoDenialToggleInput, autoDenialToggleLabel, true);
+        waitUtils.sendKeys(autoDenialAfterValueInput, String.valueOf(value));
+        Select period = new Select(waitUtils.waitForVisibility(autoDenialAfterUnitSelect));
+        period.selectByValue(unit);
+    }
+
+    public String getAutoDenialAfterValue() {
+        clickGeneralTab();
+        return waitUtils.waitForVisibility(autoDenialAfterValueInput).getAttribute("value");
+    }
+
+    public String getAutoDenialAfterUnit() {
+        clickGeneralTab();
+        Select period = new Select(waitUtils.waitForVisibility(autoDenialAfterUnitSelect));
+        return period.getFirstSelectedOption().getAttribute("value");
     }
 
     public void setUserRoleRequestToggle(boolean enable) {

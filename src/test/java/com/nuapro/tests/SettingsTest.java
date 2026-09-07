@@ -168,4 +168,29 @@ public class SettingsTest extends BaseTest {
                 "Expected invitation-code error should be displayed. Actual: "
                         + registrationPage.getRegistrationErrorText());
     }
+
+    @Test(groups = {"settings", "denial"}, description = "Denial settings: Deny Automatically persists")
+    public void testAutomaticDenialPersistence() {
+        LoginPage loginPage = new LoginPage(driver);
+        DashboardPage dashboardPage = loginPage.loginAsAdmin();
+        SettingsPage settingsPage = dashboardPage.clickSettingsTab();
+
+        settingsPage.setAutoDenialSchedule(1, "minute");
+        settingsPage.saveSettings();
+        driver.navigate().refresh();
+
+        Assert.assertTrue(settingsPage.isAutoDenialToggleEnabled(),
+                "Deny Automatically should remain enabled after refresh");
+        Assert.assertTrue(settingsPage.isAutoDenialSettingsVisible(),
+                "Deny After and Time Period settings should be visible when automatic denial is enabled");
+        Assert.assertEquals(settingsPage.getAutoDenialAfterValue(), "1",
+                "Automatic denial should be configured for one minute");
+        Assert.assertEquals(settingsPage.getAutoDenialAfterUnit(), "minute",
+                "Automatic denial time period should be minutes");
+
+        RegistrationPage registrationPage = new RegistrationPage(driver);
+        registrationPage.open();
+        Assert.assertTrue(registrationPage.isRegistrationFormAvailable(),
+                "Registration form should be available for creating a pending user for automatic denial");
+    }
 }
