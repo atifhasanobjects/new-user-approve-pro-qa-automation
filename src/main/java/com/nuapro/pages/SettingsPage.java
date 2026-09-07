@@ -36,6 +36,10 @@ public class SettingsPage {
     private final By autoDenialSettings = By.cssSelector(".denial-settings");
     private final By autoDenialAfterValueInput = By.cssSelector(".denial-settings input[type='number']");
     private final By autoDenialAfterUnitSelect = By.cssSelector(".denial-settings select.denial-select");
+
+    // Password & Security Settings
+    private final By bypassPasswordResetToggleInput = By.id("nua_bypass_password_reset");
+    private final By bypassPasswordResetToggleLabel = By.cssSelector("label.nua_switch[for='nua_bypass_password_reset']");
     private final By registrationDeadlineToggleInput = By.id("nua_registration_deadline");
     private final By registrationDeadlineToggleLabel = By.cssSelector("label.nua_switch[for='nua_registration_deadline']");
     private final By registrationDeadlineDateTypeInput = By.id("nua_checkbox_for_deadline_type");
@@ -122,6 +126,16 @@ public class SettingsPage {
         waitUtils.setCheckboxState(autoApproveToggleInput, autoApproveToggleLabel, enable);
     }
 
+    public void setBypassPasswordResetToggle(boolean enable) {
+        clickGeneralTab();
+        waitUtils.setCheckboxState(bypassPasswordResetToggleInput, bypassPasswordResetToggleLabel, enable);
+    }
+
+    public boolean isBypassPasswordResetToggleEnabled() {
+        clickGeneralTab();
+        return waitUtils.isCheckboxSelected(bypassPasswordResetToggleInput);
+    }
+
     public void setEnableInvitationCodeToggle(boolean enable) {
         clickGeneralTab();
         waitUtils.setCheckboxState(inviteCodeToggleInput, inviteCodeToggleLabel, enable);
@@ -145,6 +159,11 @@ public class SettingsPage {
     public boolean isAutoApproveToggleEnabled() {
         clickGeneralTab();
         return waitUtils.isCheckboxSelected(autoApproveToggleInput);
+    }
+
+    public void setRegistrationDeadlineToggle(boolean enable) {
+        clickGeneralTab();
+        waitUtils.setCheckboxState(registrationDeadlineToggleInput, registrationDeadlineToggleLabel, enable);
     }
 
     public void setAutoDenialToggle(boolean enable) {

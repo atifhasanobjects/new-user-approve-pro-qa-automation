@@ -4,6 +4,8 @@ import com.nuapro.base.BaseTest;
 import com.nuapro.pages.DashboardPage;
 import com.nuapro.pages.InvitationCodesPage;
 import com.nuapro.pages.LoginPage;
+import com.nuapro.pages.ThemeMyLoginLoginPage;
+import com.nuapro.pages.ThemeMyLoginRegistrationPage;
 import com.nuapro.pages.RegistrationPage;
 import com.nuapro.pages.SettingsPage;
 import com.nuapro.pages.UsersPage;
@@ -228,6 +230,49 @@ public class SettingsTest extends BaseTest {
 
         Assert.assertTrue(waitForDeniedUser(usersPage, email),
                 "Pending user should be automatically denied after one minute");
+    }
+
+    @Test(groups = {"settings", "password"}, description = "Password & Security: Bypass password reset keeps original password after approval")
+    public void testBypassPasswordResetKeepsOriginalPassword() {
+        LoginPage loginPage = new LoginPage(driver);
+        DashboardPage dashboardPage = loginPage.loginAsAdmin();
+        SettingsPage settingsPage = dashboardPage.clickSettingsTab();
+
+        String knownPassword = "QAMyPass123!"; // must meet Theme My Login password strength
+        // Isolate the fixture so it must enter Pending before approval.
+        settingsPage.setEnableAutoApproveToggle(false);
+        settingsPage.setAutoDenialToggle(false);
+        settingsPage.setEnableInvitationCodeToggle(false);
+        settingsPage.setInvitationCodeRequiredToggle(false);
+        settingsPage.setRegistrationDeadlineToggle(false);
+        settingsPage.setBypassPasswordResetToggle(true);
+        settingsPage.saveSettings();
+        driver.navigate().refresh();
+        Assert.assertFalse(settingsPage.isAutoApproveToggleEnabled(),
+                "Auto-Approve must be disabled so the fixture enters Pending");
+        Assert.assertTrue(settingsPage.isBypassPasswordResetToggleEnabled(),
+                "Bypass Password Reset should remain enabled after refresh");
+
+        ThemeMyLoginRegistrationPage registrationPage = new ThemeMyLoginRegistrationPage(driver);
+        String username = TestData.generateUsername();
+        String email = username + "@example.test";
+        registrationPage.registerUser(username, email, knownPassword);
+        Assert.assertFalse(registrationPage.isRegistrationErrorDisplayed(),
+                "Registration should succeed with a known password. Error: " + registrationPage.getRegistrationErrorText());
+
+        dashboardPage = loginPage.loginAsAdmin();
+        UsersPage usersPage = dashboardPage.clickUsersTab();
+        usersPage.clickPendingUsersSubTab();
+        Assert.assertTrue(usersPage.getUserTable().isUserRowPresent(username),
+                "New user should appear in Pending users before approval");
+
+        usersPage.getUserTable().approveUser(username);
+
+        // If bypass works, the original password must still be valid.
+        ThemeMyLoginLoginPage userLogin = new ThemeMyLoginLoginPage(driver);
+        userLogin.login(username, knownPassword);
+        Assert.assertFalse(userLogin.isErrorMessageDisplayed(),
+                "Login with the original password should succeed when bypass is enabled");
     }
 
     private boolean waitForDeniedUser(UsersPage usersPage, String email) {
