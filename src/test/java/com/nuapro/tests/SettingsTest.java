@@ -2,17 +2,30 @@ package com.nuapro.tests;
 
 import com.nuapro.base.BaseTest;
 import com.nuapro.pages.DashboardPage;
+import com.nuapro.pages.InvitationCodesPage;
 import com.nuapro.pages.LoginPage;
 import com.nuapro.pages.RegistrationPage;
 import com.nuapro.pages.SettingsPage;
 import com.nuapro.pages.UsersPage;
 import com.nuapro.utils.TestData;
+import org.openqa.selenium.JavascriptExecutor;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 public class SettingsTest extends BaseTest {
+
+    private static final ZoneId WORDPRESS_ZONE = ZoneId.of("Asia/Karachi");
+
+    private ZoneId getBrowserTimezone() {
+        String tz = (String) ((JavascriptExecutor) driver).executeScript(
+                "return Intl.DateTimeFormat().resolvedOptions().timeZone;");
+        return ZoneId.of(tz);
+    }
 
     @Test(groups = {"settings"}, description = "TC037: General settings save and refresh persistence")
     public void testGeneralSettingsPersistence() {
@@ -234,5 +247,161 @@ public class SettingsTest extends BaseTest {
             }
         }
         return false;
+    }
+
+    @Test(groups = {"settings", "registration"}, description = "Registration deadline blocks new registrations after the configured date")
+    public void testRegistrationDeadlineBlocksRegistration() {
+        LoginPage loginPage = new LoginPage(driver);
+        DashboardPage dashboardPage = loginPage.loginAsAdmin();
+        SettingsPage settingsPage = dashboardPage.clickSettingsTab();
+
+        settingsPage.setEnableAutoApproveToggle(false);
+        settingsPage.setAutoDenialToggle(false);
+        // Temporarily enable the invitation-code section so the override
+        // control is rendered and can be explicitly reset.
+        settingsPage.setEnableInvitationCodeToggle(true);
+        settingsPage.setInvitationCodeRequiredToggle(false);
+        settingsPage.setApproveInvitationCodeAfterDeadline(false);
+        settingsPage.setEnableInvitationCodeToggle(false);
+        LocalDateTime deadline = fiveMinutePickerDeadline();
+        settingsPage.setRegistrationDeadlineDateTime(deadline);
+        settingsPage.saveSettings();
+        driver.navigate().refresh();
+        Assert.assertTrue(settingsPage.isRegistrationDeadlineEnabled(),
+                "Registration Deadline should persist as enabled");
+        Assert.assertTrue(settingsPage.isRegistrationDeadlineDateTypeEnabled(),
+                "Date and Time deadline type should persist as enabled");
+        Assert.assertFalse(settingsPage.isRegistrationDeadlineNumberTypeEnabled(),
+                "Number of Registration deadline type should persist as disabled");
+        Instant configuredDeadline = parseConfiguredDeadlineInstant(settingsPage.getRegistrationDeadlineDateTime());
+
+        RegistrationPage registrationPage = new RegistrationPage(driver);
+        String beforeDeadlineUsername = TestData.generateUsername();
+        String beforeDeadlineEmail = beforeDeadlineUsername + "@example.test";
+        registrationPage.registerUser(beforeDeadlineUsername, beforeDeadlineEmail);
+        Assert.assertTrue(registrationPage.isRegistrationSuccessful(),
+                "Registration before the deadline should be accepted");
+
+        dashboardPage = loginPage.loginAsAdmin();
+        UsersPage usersPage = dashboardPage.clickUsersTab();
+        usersPage.clickPendingUsersSubTab();
+        usersPage.getUserTable().searchUser(beforeDeadlineEmail);
+        Assert.assertTrue(usersPage.getUserTable().isUserRowPresent(beforeDeadlineEmail),
+                "User registered before the deadline should initially be pending");
+
+        waitUntil(configuredDeadline.plusSeconds(15));
+
+        dashboardPage = loginPage.loginAsAdmin();
+        usersPage = dashboardPage.clickUsersTab();
+        usersPage.clickPendingUsersSubTab();
+        usersPage.getUserTable().searchUser(beforeDeadlineEmail);
+        Assert.assertTrue(usersPage.getUserTable().isUserRowPresent(beforeDeadlineEmail),
+                "Registration deadline should not change the status of a user already registered before it");
+
+        String afterDeadlineUsername = TestData.generateUsername();
+        String afterDeadlineEmail = afterDeadlineUsername + "@example.test";
+        registrationPage.registerUser(afterDeadlineUsername, afterDeadlineEmail);
+        Assert.assertTrue(registrationPage.isRegistrationFailed(),
+                "Registration after the deadline should be rejected");
+    }
+
+    @Test(groups = {"settings", "registration", "invitation"}, description = "Invitation code can approve registration after deadline")
+    public void testInvitationCodeApprovalAfterRegistrationDeadline() {
+        LoginPage loginPage = new LoginPage(driver);
+        DashboardPage dashboardPage = loginPage.loginAsAdmin();
+        SettingsPage settingsPage = dashboardPage.clickSettingsTab();
+
+        settingsPage.setEnableAutoApproveToggle(false);
+        settingsPage.setAutoDenialToggle(false);
+        settingsPage.setEnableInvitationCodeToggle(true);
+        settingsPage.setInvitationCodeRequiredToggle(true);
+        settingsPage.saveSettings();
+
+        String invitationCode = TestData.generateInvitationCode();
+        InvitationCodesPage invitationCodesPage = dashboardPage.clickInvitationCodesTab();
+        invitationCodesPage.createManualCode(invitationCode, 1);
+        Assert.assertTrue(invitationCodesPage.isCodePresentInList(invitationCode),
+                "The invitation code fixture should be active before the deadline test starts");
+
+        dashboardPage = loginPage.loginAsAdmin();
+        settingsPage = dashboardPage.clickSettingsTab();
+        settingsPage.setAutoDenialToggle(false);
+        LocalDateTime deadline = fiveMinutePickerDeadline();
+        settingsPage.setRegistrationDeadlineDateTime(deadline);
+        settingsPage.setApproveInvitationCodeAfterDeadline(true);
+        settingsPage.saveSettings();
+        driver.navigate().refresh();
+        Assert.assertTrue(settingsPage.isRegistrationDeadlineEnabled(),
+                "Registration Deadline should persist as enabled");
+        Assert.assertTrue(settingsPage.isRegistrationDeadlineDateTypeEnabled(),
+                "Date and Time deadline type should persist as enabled");
+        Assert.assertFalse(settingsPage.isRegistrationDeadlineNumberTypeEnabled(),
+                "Number of Registration deadline type should persist as disabled");
+        Assert.assertTrue(settingsPage.isApproveInvitationCodeAfterDeadlineEnabled(),
+                "Approve On Invitation Code After Deadline should persist as enabled");
+
+        Instant configuredDeadline = parseConfiguredDeadlineInstant(settingsPage.getRegistrationDeadlineDateTime());
+        waitUntil(configuredDeadline.plusSeconds(15));
+
+        RegistrationPage registrationPage = new RegistrationPage(driver);
+        String username = TestData.generateUsername();
+        String email = username + "@example.test";
+        registrationPage.registerUserWithInvitationCode(username, email, invitationCode);
+        Assert.assertTrue(registrationPage.isRegistrationSuccessful(),
+                "Valid invitation-code registration should be accepted after the deadline");
+
+        dashboardPage = loginPage.loginAsAdmin();
+        UsersPage usersPage = dashboardPage.clickUsersTab();
+        usersPage.clickApprovedUsersSubTab();
+        usersPage.getUserTable().searchUser(email);
+        Assert.assertTrue(usersPage.getUserTable().isUserRowPresent(email),
+                "Invitation-code registration after the deadline should be approved");
+    }
+
+    private void waitUntil(LocalDateTime deadline) {
+        waitUntil(deadline.atZone(getBrowserTimezone()).toInstant());
+    }
+
+    private Instant parseConfiguredDeadlineInstant(String pickerValue) {
+        // pickerValue example: "2026-09-07 01:00 PM"
+        // The MUI DateTimePicker displays browser-local time, so parse it
+        // using the browser's timezone rather than the WordPress server zone.
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
+                .ofPattern("yyyy-MM-dd hh:mm a", java.util.Locale.ENGLISH);
+        LocalDateTime ldt = LocalDateTime.parse(pickerValue, fmt);
+        return ldt.atZone(getBrowserTimezone()).toInstant();
+    }
+
+    private LocalDateTime fiveMinutePickerDeadline() {
+        // The MUI clock exposes minutes in five-minute increments. Round
+        // upward so the selected value is always a future, enabled option.
+        // DateTimePicker calculates minDateTime from the browser's local
+        // JavaScript clock, so use that same clock instead of the JVM clock.
+        String browserNow = (String) ((JavascriptExecutor) driver).executeScript(
+                "const d = new Date();"
+                        + "const p = n => String(n).padStart(2, '0');"
+                        + "return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())"
+                        + " + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());");
+        LocalDateTime target = LocalDateTime.parse(
+                browserNow,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                .plusMinutes(5);
+        int roundedMinute = ((target.getMinute() + 4) / 5) * 5;
+        if (roundedMinute == 60) {
+            return target.withMinute(0).withSecond(0).withNano(0).plusHours(1);
+        }
+        return target.withMinute(roundedMinute).withSecond(0).withNano(0);
+    }
+
+    private void waitUntil(Instant deadline) {
+        while (Instant.now().isBefore(deadline)) {
+            long remainingMillis = Duration.between(Instant.now(), deadline).toMillis();
+            try {
+                Thread.sleep(Math.min(5000, Math.max(250, remainingMillis)));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while waiting for registration deadline", interrupted);
+            }
+        }
     }
 }

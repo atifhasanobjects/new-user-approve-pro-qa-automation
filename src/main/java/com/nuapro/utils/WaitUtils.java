@@ -151,20 +151,33 @@ public class WaitUtils {
     }
 
     public void clickElement(By locator) {
-        WebElement element = waitForClickable(locator);
-        try {
-            element.click();
-        } catch (ElementNotInteractableException intercepted) {
-            // WordPress's fixed #wpadminbar can cover a tab after browser
-            // scrolling, even though the tab is visible and enabled. Keyboard
-            // activation is attempted first; a MUI portal can still report the
-            // control as non-interactable while its visible overlay is settling.
+        StaleElementReferenceException lastStale = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            WebElement element = waitForClickable(locator);
             try {
-                element.sendKeys(Keys.ENTER);
-            } catch (ElementNotInteractableException retry) {
-                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                element.click();
+                return;
+            } catch (StaleElementReferenceException stale) {
+                // React/MUI can replace the matched node immediately after
+                // the wait returns. Re-find it before trying the click again.
+                lastStale = stale;
+            } catch (ElementNotInteractableException intercepted) {
+                // WordPress's fixed #wpadminbar can cover a tab after browser
+                // scrolling, even though the tab is visible and enabled. Keyboard
+                // activation is attempted first; a MUI portal can still report the
+                // control as non-interactable while its visible overlay is settling.
+                try {
+                    element.sendKeys(Keys.ENTER);
+                    return;
+                } catch (ElementNotInteractableException retry) {
+                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+                    return;
+                } catch (StaleElementReferenceException stale) {
+                    lastStale = stale;
+                }
             }
         }
+        throw lastStale;
     }
 
     public void sendKeys(By locator, String text) {
