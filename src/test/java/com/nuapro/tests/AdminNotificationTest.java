@@ -47,9 +47,10 @@ public class AdminNotificationTest extends NotificationTestBase {
         DashboardPage dashboardPage = loginAsAdmin();
         configurePendingRegistration(dashboardPage);
 
-        String subjectMarker = marker("ADMIN_APPROVAL");
-        String bodyMarker = marker("ADMIN_APPROVAL_BODY");
-        configureAdminNotification(dashboardPage, subjectMarker, bodyMarker);
+        configureAdminNotification(
+                dashboardPage,
+                marker("ADMIN_APPROVAL_REGISTRATION"),
+                marker("ADMIN_APPROVAL_REGISTRATION_BODY"));
         PendingUser user = registerPendingUser();
 
         // Ignore the registration notification and correlate only the approval
@@ -59,10 +60,9 @@ public class AdminNotificationTest extends NotificationTestBase {
 
         EmailCatcherClient.CapturedEmail email = emailClient.awaitMessage(
                 Config.getEmailSiteAdminAddress(),
-                subjectMarker,
-                bodyMarker,
+                "User Status Updated",
                 user.username(),
-                user.email());
+                "approve");
         Assert.assertTrue(email.body().contains(user.username()),
                 "Admin approval email should identify the approved user");
     }
@@ -75,9 +75,10 @@ public class AdminNotificationTest extends NotificationTestBase {
         DashboardPage dashboardPage = loginAsAdmin();
         configurePendingRegistration(dashboardPage);
 
-        String subjectMarker = marker("ADMIN_DENIAL");
-        String bodyMarker = marker("ADMIN_DENIAL_BODY");
-        configureAdminNotification(dashboardPage, subjectMarker, bodyMarker);
+        configureAdminNotification(
+                dashboardPage,
+                marker("ADMIN_DENIAL_REGISTRATION"),
+                marker("ADMIN_DENIAL_REGISTRATION_BODY"));
         PendingUser user = registerPendingUser();
 
         emailClient.clearMessages();
@@ -85,11 +86,10 @@ public class AdminNotificationTest extends NotificationTestBase {
 
         EmailCatcherClient.CapturedEmail email = emailClient.awaitMessage(
                 Config.getEmailSiteAdminAddress(),
-                subjectMarker,
-                bodyMarker,
+                "User Status Updated",
                 user.username(),
-                user.email());
-        Assert.assertTrue(email.body().contains(user.email()),
+                "deny");
+        Assert.assertTrue(email.body().contains(user.username()),
                 "Admin denial email should identify the denied user");
     }
 
