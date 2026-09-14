@@ -1,0 +1,31 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AdminNotificationTest.testAdminReceivesPendingRegistrationNotification" type="TestNG" nameIsGenerated="true" printAsyncStackTraceForExceptions="false">
+    <module name="NUAPro" />
+    <shortenClasspath name="NONE" />
+    <useClassPathOnly />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.nuapro.tests.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="SUITE_NAME" value="" />
+    <option name="PACKAGE_NAME" value="com.nuapro.tests" />
+    <option name="MAIN_CLASS_NAME" value="com.nuapro.tests.AdminNotificationTest" />
+    <option name="METHOD_NAME" value="testAdminReceivesPendingRegistrationNotification" />
+    <option name="GROUP_NAME" value="" />
+    <option name="TEST_OBJECT" value="METHOD" />
+    <option name="VM_PARAMETERS" value="-ea -DNUA_EMAIL_TEST_ENABLED=true -DNUA_EMAIL_CATCHER_API_PORT=10000 -DNUA_EMAIL_CATCHER_URL=http://127.0.0.1:10000" />
+    <option name="PARAMETERS" value="" />
+    <option name="OUTPUT_DIRECTORY" value="" />
+    <option name="TEST_SEARCH_SCOPE">
+      <value defaultName="moduleWithDependencies" />
+    </option>
+    <option name="PROPERTIES_FILE" value="" />
+    <properties />
+    <listeners />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -24,6 +24,40 @@ public class SettingsPage {
     private final By userNotifTab = By.xpath("//button[contains(normalize-space(.),'User Notification') or @value='tab=user_notification' or @value='tab=user']");
     private final By helpTab = By.xpath("//button[contains(normalize-space(.),'Help') or @value='tab=help'] | //a[contains(@href,'tab=help')]");
 
+    // Notification settings
+    private final By adminNotificationPanel = By.cssSelector(".admin_notification_email");
+    private final By userNotificationPanel = By.cssSelector(".user_settings");
+    private final By sendToAllAdminsInput = By.id("nua_send_to_all_admin");
+    private final By sendToAllAdminsLabel = By.cssSelector("label[for='nua_send_to_all_admin']");
+    private final By notifyAdminsOnStatusUpdateInput = By.id("nua_user_status_notification");
+    private final By notifyAdminsOnStatusUpdateLabel = By.cssSelector("label[for='nua_user_status_notification']");
+    private final By suppressSiteAdminInput = By.id("nua_stop_send_to_site_admin");
+    private final By suppressSiteAdminLabel = By.cssSelector("label[for='nua_stop_send_to_site_admin']");
+    private final By specificAdminRecipientsInput = By.id("nua_admin_email_specificUsers");
+    private final By specificAdminRecipientsLabel = By.cssSelector("label[for='nua_admin_email_specificUsers']");
+    private final By specificAdminRecipientSelect = By.cssSelector(".nua_admin_email_specificEmail");
+    private final By adminSubjectInput = By.name("nua_notification_admin_email_subject");
+    private final By adminMessageEditor = By.id("admin-notification-email");
+    private final By adminHtmlInput = By.cssSelector(".admin-email-section input[name='nua_send_email_as_html']");
+    private final By adminHtmlLabel = By.cssSelector(".admin-email-section label[for='nua_send_email_as_html']");
+
+    private final By userApprovalSubjectInput = By.name("approve_notification_email_subject");
+    private final By userApprovalMessageEditor = By.id("approve-notification-message");
+    private final By userApprovalHtmlInput = By.cssSelector(".user-approve-section input[name='nua_approve_send_email_as_html']");
+    private final By userApprovalHtmlLabel = By.cssSelector(".user-approve-section label[for='nua_send_email_as_html']");
+    private final By suppressDenialInput = By.id("nua_deny_stop_notification_email");
+    private final By suppressDenialLabel = By.cssSelector("label[for='nua_deny_stop_notification_email']");
+    private final By userDenialSubjectInput = By.name("nua_deny_notification_email_subject");
+    private final By userDenialMessageEditor = By.id("deny-notification-message");
+    private final By userDenialHtmlInput = By.cssSelector(".user-deny-section input[name='nua_deny_send_email_as_html']");
+    private final By userDenialHtmlLabel = By.cssSelector(".user-deny-section label[for='nua_deny_send_email_as_html']");
+    private final By welcomeEmailInput = By.id("nua_welcome_stop_notification_email");
+    private final By welcomeEmailLabel = By.cssSelector("label[for='nua_welcome_stop_notification_email']");
+    private final By welcomeSubjectInput = By.name("nua_welcome_notification_email_subject");
+    private final By welcomeMessageEditor = By.id("welcome-notification-message");
+    private final By welcomeHtmlInput = By.cssSelector(".user-welcome-section input[name='nua_welcome_send_email_as_html']");
+    private final By welcomeHtmlLabel = By.cssSelector(".user-welcome-section label[for='nua_welcome_send_email_as_html']");
+
     // General Toggles
     private final By autoApproveToggleInput = By.id("nua_enable_auto_approve");
     private final By autoApproveToggleLabel = By.cssSelector("label.nua_switch[for='nua_enable_auto_approve']");
@@ -79,26 +113,17 @@ public class SettingsPage {
     }
 
     public SettingsPage clickRegistrationTab() {
-        waitUtils.clickElement(registrationTab);
-        waitUtils.waitForLoaderToDisappear();
+        openSettingsRoute("tab=registration", ".registration_settings");
         return this;
     }
 
     public SettingsPage clickAdminNotifTab() {
-        if (!driver.getPageSource().contains("Admin Notification")) {
-            waitUtils.clickElement(notificationTab);
-        }
-        waitUtils.clickElement(adminNotifTab);
-        waitUtils.waitForLoaderToDisappear();
+        openSettingsRoute("tab=admin_notification", ".admin_notification_email");
         return this;
     }
 
     public SettingsPage clickUserNotifTab() {
-        if (!driver.getPageSource().contains("User Notification")) {
-            waitUtils.clickElement(notificationTab);
-        }
-        waitUtils.clickElement(userNotifTab);
-        waitUtils.waitForLoaderToDisappear();
+        openSettingsRoute("tab=user_notification", ".user_settings");
         return this;
     }
 
@@ -439,12 +464,200 @@ public class SettingsPage {
         waitUtils.sendKeys(adminEmailInput, email);
     }
 
+    public void setSendNotificationEmailsToAllAdmins(boolean enable) {
+        clickAdminNotifTab();
+        waitUtils.setCheckboxState(sendToAllAdminsInput, sendToAllAdminsLabel, enable);
+    }
+
+    public boolean isSendNotificationEmailsToAllAdminsEnabled() {
+        clickAdminNotifTab();
+        return waitUtils.isCheckboxSelected(sendToAllAdminsInput);
+    }
+
+    public void setNotifyAdminsOnStatusUpdate(boolean enable) {
+        clickAdminNotifTab();
+        waitUtils.setCheckboxState(
+                notifyAdminsOnStatusUpdateInput,
+                notifyAdminsOnStatusUpdateLabel,
+                enable);
+    }
+
+    public boolean isNotifyAdminsOnStatusUpdateEnabled() {
+        clickAdminNotifTab();
+        return waitUtils.isCheckboxSelected(notifyAdminsOnStatusUpdateInput);
+    }
+
+    public void setSuppressSiteAdminNotification(boolean enable) {
+        clickAdminNotifTab();
+        waitUtils.setCheckboxState(suppressSiteAdminInput, suppressSiteAdminLabel, enable);
+    }
+
+    public boolean isSuppressSiteAdminNotificationEnabled() {
+        clickAdminNotifTab();
+        return waitUtils.isCheckboxSelected(suppressSiteAdminInput);
+    }
+
+    public void setSpecificAdminRecipientsEnabled(boolean enable) {
+        clickAdminNotifTab();
+        waitUtils.setCheckboxState(
+                specificAdminRecipientsInput,
+                specificAdminRecipientsLabel,
+                enable);
+    }
+
+    public void selectSpecificAdminRecipient(String email) {
+        clickAdminNotifTab();
+        setSpecificAdminRecipientsEnabled(true);
+        waitUtils.clickElement(specificAdminRecipientSelect);
+        By option = By.xpath("//*[@role='option' and contains(normalize-space(.), "
+                + xpathLiteral(email) + ")]");
+        waitUtils.clickElement(option);
+    }
+
+    public void setAdminNotificationSubject(String subject) {
+        clickAdminNotifTab();
+        waitUtils.sendKeys(adminSubjectInput, subject);
+    }
+
+    public String getAdminNotificationSubject() {
+        clickAdminNotifTab();
+        return waitUtils.waitForVisibility(adminSubjectInput).getAttribute("value");
+    }
+
+    public void setAdminNotificationMessage(String message) {
+        clickAdminNotifTab();
+        setEditorContent(adminMessageEditor, message);
+    }
+
+    public String getAdminNotificationMessage() {
+        clickAdminNotifTab();
+        return getEditorContent(adminMessageEditor);
+    }
+
+    public void setAdminNotificationHtml(boolean enable) {
+        clickAdminNotifTab();
+        waitUtils.setCheckboxState(adminHtmlInput, adminHtmlLabel, enable);
+    }
+
+    public void setUserApprovalNotification(String subject, String message, boolean html) {
+        clickUserNotifTab();
+        waitUtils.sendKeys(userApprovalSubjectInput, subject);
+        setEditorContent(userApprovalMessageEditor, message);
+        waitUtils.setCheckboxState(userApprovalHtmlInput, userApprovalHtmlLabel, html);
+    }
+
+    public String getUserApprovalNotificationSubject() {
+        clickUserNotifTab();
+        return waitUtils.waitForVisibility(userApprovalSubjectInput).getAttribute("value");
+    }
+
+    public String getUserApprovalNotificationMessage() {
+        clickUserNotifTab();
+        return getEditorContent(userApprovalMessageEditor);
+    }
+
+    public void setSuppressDenialNotification(boolean enable) {
+        clickUserNotifTab();
+        waitUtils.setCheckboxState(suppressDenialInput, suppressDenialLabel, enable);
+    }
+
+    public boolean isSuppressDenialNotificationEnabled() {
+        clickUserNotifTab();
+        return waitUtils.isCheckboxSelected(suppressDenialInput);
+    }
+
+    public void setUserDenialNotification(String subject, String message, boolean html) {
+        clickUserNotifTab();
+        waitUtils.setCheckboxState(suppressDenialInput, suppressDenialLabel, false);
+        waitUtils.sendKeys(userDenialSubjectInput, subject);
+        setEditorContent(userDenialMessageEditor, message);
+        waitUtils.setCheckboxState(userDenialHtmlInput, userDenialHtmlLabel, html);
+    }
+
+    public String getUserDenialNotificationSubject() {
+        clickUserNotifTab();
+        return waitUtils.waitForVisibility(userDenialSubjectInput).getAttribute("value");
+    }
+
+    public String getUserDenialNotificationMessage() {
+        clickUserNotifTab();
+        return getEditorContent(userDenialMessageEditor);
+    }
+
+    public void setUserWelcomeNotification(boolean enable, String subject,
+                                           String message, boolean html) {
+        clickUserNotifTab();
+        waitUtils.setCheckboxState(welcomeEmailInput, welcomeEmailLabel, enable);
+        waitUtils.sendKeys(welcomeSubjectInput, subject);
+        setEditorContent(welcomeMessageEditor, message);
+        waitUtils.setCheckboxState(welcomeHtmlInput, welcomeHtmlLabel, html);
+    }
+
+    public boolean isUserWelcomeNotificationEnabled() {
+        clickUserNotifTab();
+        return waitUtils.isCheckboxSelected(welcomeEmailInput);
+    }
+
+    public String getUserWelcomeNotificationSubject() {
+        clickUserNotifTab();
+        return waitUtils.waitForVisibility(welcomeSubjectInput).getAttribute("value");
+    }
+
+    public String getUserWelcomeNotificationMessage() {
+        clickUserNotifTab();
+        return getEditorContent(welcomeMessageEditor);
+    }
+
+    private void setEditorContent(By editorLocator, String content) {
+        WebElement editor = waitUtils.waitForPresence(editorLocator);
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                "const textarea = arguments[0];"
+                        + "const value = arguments[1];"
+                        + "const editorId = textarea.id;"
+                        + "if (window.tinymce && window.tinymce.get(editorId)) {"
+                        + "  const tinyEditor = window.tinymce.get(editorId);"
+                        + "  tinyEditor.setContent(value);"
+                        + "  tinyEditor.save();"
+                        + "  tinyEditor.fire('change');"
+                        + "}"
+                        + "const setter = Object.getOwnPropertyDescriptor("
+                        + "HTMLTextAreaElement.prototype, 'value').set;"
+                        + "setter.call(textarea, value);"
+                        + "textarea.dispatchEvent(new Event('input', {bubbles: true}));"
+                        + "textarea.dispatchEvent(new Event('change', {bubbles: true}));",
+                editor, content);
+    }
+
+    private String getEditorContent(By editorLocator) {
+        WebElement editor = waitUtils.waitForPresence(editorLocator);
+        Object value = ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                "const textarea = arguments[0];"
+                        + "if (window.tinymce && window.tinymce.get(textarea.id)) {"
+                        + "  return window.tinymce.get(textarea.id).getContent();"
+                        + "}"
+                        + "return textarea.value;",
+                editor);
+        return value == null ? "" : String.valueOf(value);
+    }
+
     public void saveSettings() {
         waitUtils.clickElement(saveSettingsBtn);
         // Toast markup/timing differs between React Toastify builds. Persistence
         // is verified by the caller after refresh, which is the authoritative
         // result; use the loader only as a short synchronization aid here.
         waitUtils.waitForLoaderToDisappear();
+    }
+
+    private void openSettingsRoute(String tab, String readySelector) {
+        String settingsUrl = Config.getBaseUrl()
+                + "/wp-admin/admin.php?page=new-user-approve-admin#/action=settings/"
+                + tab;
+        if (!driver.getCurrentUrl().contains("action=settings/" + tab)) {
+            driver.get(settingsUrl);
+        }
+        waitUtils.waitForUrlContains("action=settings/" + tab);
+        waitUtils.waitForLoaderToDisappear();
+        waitUtils.waitForVisibility(By.cssSelector(readySelector));
     }
 
     private String xpathLiteral(String value) {

@@ -27,6 +27,13 @@ public class WaitUtils {
         return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
     }
 
+    public WebElement waitForPresence(By locator) {
+        return wait.until(currentDriver -> currentDriver.findElements(locator)
+                .stream()
+                .findFirst()
+                .orElse(null));
+    }
+
     public WebElement waitForClickable(By locator) {
         // React/MUI can keep an old, hidden copy of a component in the DOM while
         // replacing it.  ExpectedConditions.elementToBeClickable(locator) uses
@@ -67,15 +74,50 @@ public class WaitUtils {
      * unchanged configuration.
      */
     public void setCheckboxState(By checkboxLocator, By visibleLabelLocator, boolean expectedState) {
-        if (isCheckboxSelected(checkboxLocator) == expectedState) {
+        WebElement checkbox = findCheckboxAssociatedWithLabel(
+                checkboxLocator, visibleLabelLocator);
+        if (checkbox != null && checkbox.isSelected() == expectedState) {
             return;
         }
 
-        clickElement(visibleLabelLocator);
-        wait.until(currentDriver -> {
-            WebElement checkbox = firstEnabled(currentDriver.findElements(checkboxLocator));
-            return checkbox != null && checkbox.isSelected() == expectedState;
-        });
+        for (int attempt = 0; attempt < 2; attempt++) {
+            WebElement label = waitForClickable(visibleLabelLocator);
+            try {
+                if (attempt == 0) {
+                    label.click();
+                } else {
+                    // React can replace the label immediately after the first
+                    // click. A fresh JS click avoids a stale/covered label
+                    // while still dispatching the native label activation.
+                    ((JavascriptExecutor) driver).executeScript(
+                            "arguments[0].click();", label);
+                }
+            } catch (ElementNotInteractableException e) {
+                ((JavascriptExecutor) driver).executeScript(
+                        "arguments[0].click();", label);
+            }
+
+            try {
+                wait.until(currentDriver -> {
+                    WebElement associated = findCheckboxAssociatedWithLabel(
+                            checkboxLocator, visibleLabelLocator);
+                    if (associated != null) {
+                        return associated.isSelected() == expectedState;
+                    }
+                    WebElement fallback = firstEnabled(
+                            currentDriver.findElements(checkboxLocator));
+                    return fallback != null && fallback.isSelected() == expectedState;
+                });
+                return;
+            } catch (TimeoutException ignored) {
+                // Retry once with a fresh label in case the React component
+                // re-rendered between the click and state assertion.
+            }
+        }
+
+        throw new TimeoutException("Checkbox did not reach expected state "
+                + expectedState + " for " + checkboxLocator
+                + ". " + diagnostics());
     }
 
     public boolean waitForInvisibility(By locator) {
@@ -215,6 +257,34 @@ public class WaitUtils {
                 }
             } catch (StaleElementReferenceException ignored) {
                 // React replaced the element between polling attempts.
+            }
+        }
+        return null;
+    }
+
+    private WebElement findCheckboxAssociatedWithLabel(By checkboxLocator,
+                                                        By labelLocator) {
+        for (WebElement label : driver.findElements(labelLocator)) {
+            try {
+                if (!label.isDisplayed() || !label.isEnabled()) {
+                    continue;
+                }
+                List<WebElement> nestedInputs = label.findElements(
+                        By.cssSelector("input[type='checkbox']"));
+                if (!nestedInputs.isEmpty() && nestedInputs.get(0).isEnabled()) {
+                    return nestedInputs.get(0);
+                }
+
+                String forValue = label.getAttribute("for");
+                if (forValue != null && !forValue.isBlank()) {
+                    for (WebElement associated : driver.findElements(By.id(forValue))) {
+                        if (associated.isEnabled()) {
+                            return associated;
+                        }
+                    }
+                }
+            } catch (StaleElementReferenceException ignored) {
+                // React replaced this label; inspect the fresh match instead.
             }
         }
         return null;

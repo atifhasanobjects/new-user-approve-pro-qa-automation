@@ -16,6 +16,7 @@
         <testng.version>7.10.2</testng.version>
         <webdrivermanager.version>5.9.2</webdrivermanager.version>
         <commons-csv.version>1.10.0</commons-csv.version>
+        <gson.version>2.11.0</gson.version>
         <slf4j.version>2.0.12</slf4j.version>
         <surefire.version>3.5.2</surefire.version>
     </properties>
@@ -41,6 +42,11 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
             <version>${commons-csv.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
